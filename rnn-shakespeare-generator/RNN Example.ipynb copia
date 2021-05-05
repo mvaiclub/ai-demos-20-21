@@ -1,0 +1,376 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "interracial-bradford",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "!pip install tensorflow\n",
+    "!pip install numpy"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "raised-george",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import tensorflow as tf\n",
+    "from tensorflow.keras.layers.experimental import preprocessing \n",
+    "import numpy as np \n",
+    "import os \n",
+    "import time"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "attached-sally",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import ssl\n",
+    "\n",
+    "ssl._create_default_https_context = ssl._create_unverified_context"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "prepared-spirit",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "path_to_file = tf.keras.utils.get_file('shakespeare.txt', 'https://storage.googleapis.com/download.tensorflow.org/data/shakespeare.txt')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "excited-digit",
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [],
+   "source": [
+    "print(path_to_file) \n",
+    "text = open(path_to_file, 'rb').read().decode(encoding = 'utf-8')\n",
+    "print(f'Length of text: {len(text)} characters')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "nutritional-delivery",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print(text[:250])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "proud-landscape",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "vocab = sorted(set(text))\n",
+    "print(f'{len(vocab)} unique characters')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "altered-mouth",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "example_texts = ['abcdefg', 'xyz'] # 'abcdefg' -> ['a', 'b', 'c', 'd' ...]\n",
+    "chars = tf.strings.unicode_split(example_texts, input_encoding = 'UTF-8')\n",
+    "chars"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "matched-leisure",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ids_froms_chars = preprocessing.StringLookup(\n",
+    "vocabulary = list(vocab))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "present-scratch",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ids = ids_froms_chars(chars)\n",
+    "#ids\n",
+    "\n",
+    "chars_from_ids = tf.keras.layers.experimental.preprocessing.StringLookup(\n",
+    "    vocabulary = ids_froms_chars.get_vocabulary(), invert = True\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "light-bridal",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "chars = chars_from_ids(ids)\n",
+    "chars"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "patient-hartford",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "tf.strings.reduce_join(chars, axis =-1).numpy()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "molecular-audience",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def text_from_ids(ids):\n",
+    "    return tf.strings.reduce_join(chars, axis =-1).numpy()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "cubic-criterion",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Training and testing\n",
+    "all_ids = ids_froms_chars(tf.strings.unicode_split(text, 'UTF-8'))\n",
+    "all_ids"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "naughty-composite",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ids_dataset = tf.data.Dataset.from_tensor_slices(all_ids) #Creating the dataset to train the model "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "agricultural-separate",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for ids in ids_dataset.take(10):\n",
+    "    print(chars_from_ids(ids).numpy().decode('utf-8'))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "vanilla-found",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "seq_length = 100 \n",
+    "examples_per_epoch = len(text) // (seq_length + 1)\n",
+    "\n",
+    "examples_per_epoch"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "incident-bottle",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sequence = ids_dataset.batch(seq_length + 1, drop_remainder = True)\n",
+    "for seq in sequence.take(1):\n",
+    "    print(chars_from_ids(seq))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "proof-slide",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for seq in sequence.take(5):\n",
+    "    print(text_from_ids(seq))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "regulation-consciousness",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def split_input_target(sequence):\n",
+    "    input_text = sequence[:-1]\n",
+    "    target_text = sequence[1: ]\n",
+    "    return input_text, target_text\n",
+    "\n",
+    "split_input_target(\"Tensorflow\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "interstate-narrow",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dataset = sequence.map(split_input_target)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "killing-republic",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for input_example, target_example in dataset.take(1):\n",
+    "    print(text_from_ids(input_example.numpy()))\n",
+    "    print(text_from_ids(target_example.numpy()))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "structured-sharp",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "BATCH_SIZE = 64\n",
+    "BUFFER_SIZE = 10000\n",
+    "\n",
+    "dataset = (\n",
+    "    dataset\n",
+    "    .shuffle(BUFFER_SIZE)\n",
+    "    .batch(BATCH_SIZE, drop_remainder = True)\n",
+    "    .prefetch(tf.data.experimental.AUTOTUNE)\n",
+    ")\n",
+    "\n",
+    "dataset"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "monetary-kazakhstan",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "vocab_size = len(vocab)\n",
+    "\n",
+    "embedding_dim = 256\n",
+    "rnn_units = 1024"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "little-shanghai",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class MyModel(tf.keras.Model): #Don't worry about this code for nwo\n",
+    "      def __init__(self, vocab_size, embedding_dim, rnn_units):\n",
+    "        super().__init__(self)\n",
+    "        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)\n",
+    "        self.gru = tf.keras.layers.GRU(rnn_units,\n",
+    "                                       return_sequences=True,\n",
+    "                                       return_state=True)\n",
+    "        self.dense = tf.keras.layers.Dense(vocab_size)\n",
+    "\n",
+    "      def call(self, inputs, states=None, return_state=False, training=False):\n",
+    "        x = inputs\n",
+    "        x = self.embedding(x, training=training)\n",
+    "        if states is None:\n",
+    "          states = self.gru.get_initial_state(x)\n",
+    "        x, states = self.gru(x, initial_state=states, training=training)\n",
+    "        x = self.dense(x, training=training)\n",
+    "\n",
+    "        if return_state:\n",
+    "          return x, states\n",
+    "        else:\n",
+    "          return x"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "painted-appliance",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def train_model(EPOCHS = 20, ):\n",
+    "    model = MyModel(\n",
+    "    vocab_size = len(ids_froms_chars.get_vocabulary()),\n",
+    "    embedding_dim = embedding_dim, \n",
+    "    rnn_units = rnn_units )\n",
+    "\n",
+    "    loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits = True) #Loss function\n",
+    "    model.compile(optimizer = 'adam', loss = loss)\n",
+    "\n",
+    "\n",
+    "    checkpoint_dir = './training_checkpoints'\n",
+    "    checkpoint_prefix = os.path.join(checkpoint_dir, \"ckpt_{epoch}\")\n",
+    "    checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(\n",
+    "        filepath = checkpoint_prefix, \n",
+    "        save_weights_only = True\n",
+    "    )\n",
+    "    \n",
+    "    history = model.fit(dataset, epochs = EPOCHS, callbacks = [checkpoint_callback])\n",
+    "    return model\n",
+    "\n",
+    "model = train_model(10)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "myenv",
+   "language": "python",
+   "name": "myenv"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
